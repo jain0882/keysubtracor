@@ -46,6 +46,9 @@ typedef struct ThreadArgsMain_ {
 	char str_publickey[131];
 	char str_rmd160[41];
 	char str_address[41];
+	char str_publickey_1[131];
+	char str_rmd160_1[41];
+	char str_address_1[41];
 	struct Point target_publickey;
        	struct Point base_publickey;
 	struct Point sum_publickey;
@@ -53,8 +56,8 @@ typedef struct ThreadArgsMain_ {
 	struct Point dst_publickey;
 	pthread_mutex_t* pMutex;
 	sem_t* pSemaphore;
-	ThreadPool* pThreadPool;
 	FILE* pOutput;
+	mpz_t base_key, sum_key, dst_key;
 }ThreadArgsMain;
 
 struct Point base_publickey,sum_publickey,negated_publickey,dst_publickey;
@@ -79,88 +82,58 @@ void taskOne(void* pArg)
 	ThreadArgsMain* pMainArgs = pArg;
         FILE* OUTPUT = pMainArgs->pOutput;	
 
-	mpz_urandomm(base_key,state,diff);
-        Scalar_Multiplication(G,&(pMainArgs->base_publickey),base_key);
+	mpz_urandomm(pMainArgs->base_key,state,diff);
+        Scalar_Multiplication(G,&(pMainArgs->base_publickey), pMainArgs->base_key);
         Point_Negation(&(pMainArgs->base_publickey),&(pMainArgs->negated_publickey));
-        Point_Addition(&(pMainArgs->base_publickey),&target_publickey,&(pMainArgs->dst_publickey));
+        Point_Addition(&(pMainArgs->base_publickey),&(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
 
         switch(FLAG_FORMART)    
 	{
                  case 0: //Publickey
                         generate_strpublickey(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_publickey);
-                        if(FLAG_HIDECOMMENT)
-			{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                fprintf(OUTPUT,"%s\n",pMainArgs->str_publickey);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
-                        else    
-			{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # - %Zd\n",pMainArgs->str_publickey,base_key);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
 
-                        Point_Addition(&(pMainArgs->negated_publickey),&target_publickey,&(pMainArgs->dst_publickey));
-                        generate_strpublickey(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_publickey);
+                        Point_Addition(&(pMainArgs->negated_publickey),&(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+                        generate_strpublickey(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_publickey_1);
                         if(FLAG_HIDECOMMENT)   
 		       	{
 				pthread_mutex_lock(pMainArgs->pMutex);
                                 fprintf(OUTPUT,"%s\n", pMainArgs->str_publickey);
+                                fprintf(OUTPUT,"%s\n", pMainArgs->str_publickey_1);
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         else    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # + %Zd\n",pMainArgs->str_publickey,base_key);
+                                gmp_fprintf(OUTPUT,"%s # - %Zd\n",pMainArgs->str_publickey, pMainArgs->base_key);
+                                gmp_fprintf(OUTPUT,"%s # + %Zd\n",pMainArgs->str_publickey_1, pMainArgs->base_key);
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         break;
 		 case 1: //rmd160
                         generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160);
+                        
+			Point_Addition(&(pMainArgs->negated_publickey),&(pMainArgs->target_publickey),&(pMainArgs->dst_publickey));
+                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160_1);
                         if(FLAG_HIDECOMMENT)    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
                                 fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160);
+                                fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160_1);
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         else    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_rmd160, base_key);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
-                        Point_Addition(&(pMainArgs->negated_publickey),&target_publickey,&(pMainArgs->dst_publickey));
-                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_rmd160);
-                        if(FLAG_HIDECOMMENT)    
-			{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
-                        else    
-			{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_rmd160,base_key);
+                                gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_rmd160, pMainArgs->base_key);
+                                gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_rmd160_1, pMainArgs->base_key);
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         break;
 		 case 2: //address
                         generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_address);
-                        if(FLAG_HIDECOMMENT)    
-			{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                fprintf(OUTPUT,"%s\n",pMainArgs->str_address);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
-                        else   
-		       	{
-				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_address, base_key);
-				pthread_mutex_unlock(pMainArgs->pMutex);
-                        }
-                        Point_Addition(&(pMainArgs->negated_publickey),&target_publickey,&(pMainArgs->dst_publickey));
-                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_address);
+                        
+			Point_Addition(&(pMainArgs->negated_publickey),&(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_address_1);
                         if(FLAG_HIDECOMMENT)   
 		       	{
 				pthread_mutex_lock(pMainArgs->pMutex);
@@ -170,7 +143,8 @@ void taskOne(void* pArg)
                         else    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
-                                gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_address,base_key);
+                                gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_address, pMainArgs->base_key);
+                                gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_address_1, pMainArgs->base_key);
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         break;
@@ -187,13 +161,14 @@ void taskOne(void* pArg)
       	mpz_clear(pMainArgs->dst_publickey.y);
       	mpz_clear(pMainArgs->target_publickey.x);
       	mpz_clear(pMainArgs->target_publickey.y);
+	mpz_clear(pMainArgs->base_key);
+	mpz_clear(pMainArgs->sum_key);
 
         //printf("freeing taskone args %p\n", pArg);
 
 	pMainArgs->pMutex = NULL;
 	pMainArgs->pSemaphore = NULL;
 	pMainArgs->pOutput = NULL;
-	pMainArgs->pThreadPool = NULL;
 	free(pMainArgs);
 }
 
@@ -203,104 +178,72 @@ void taskTwo(void* pArgs)
         FILE* OUTPUT = pMainArgs->pOutput;	
 
 	Point_Negation(&(pMainArgs->sum_publickey),&(pMainArgs->negated_publickey));
-	Point_Addition(&(pMainArgs->sum_publickey),&target_publickey, &(pMainArgs->dst_publickey));
+	Point_Addition(&(pMainArgs->sum_publickey),&(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
 	switch(FLAG_FORMART)
 	{
          	case 0: //Publickey
                       generate_strpublickey(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_publickey);
-                      if(FLAG_HIDECOMMENT)    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            fprintf(OUTPUT,"%s\n", pMainArgs->str_publickey);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
-                      else    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_publickey,sum_key);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
 
-                      Point_Addition(&(pMainArgs->negated_publickey), &target_publickey, &(pMainArgs->dst_publickey));
-                      generate_strpublickey(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_publickey);
+                      Point_Addition(&(pMainArgs->negated_publickey), &(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+                      generate_strpublickey(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_publickey_1);
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
                             fprintf(OUTPUT,"%s\n", pMainArgs->str_publickey);
+                            fprintf(OUTPUT,"%s\n", pMainArgs->str_publickey_1);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       else    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_publickey,sum_key);
+                            gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_publickey, pMainArgs->sum_key);
+                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_publickey_1, pMainArgs->sum_key);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       break;
 		case 1: //rmd160
                       generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160);
-                      if(FLAG_HIDECOMMENT)    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
-                      else    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_rmd160, sum_key);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
-                      Point_Addition(&(pMainArgs->negated_publickey), &target_publickey, &(pMainArgs->dst_publickey));
-                      generate_strrmd160(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_rmd160);
+                      
+		      Point_Addition(&(pMainArgs->negated_publickey), &(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+                      generate_strrmd160(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_rmd160_1);
 
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
                             fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160);
+                            fprintf(OUTPUT,"%s\n", pMainArgs->str_rmd160_1);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       else    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_rmd160,sum_key);
+                            gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_rmd160, pMainArgs->sum_key);
+                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_rmd160_1, pMainArgs->sum_key);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       break;
 		case 2: //address
                       generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address);
+                      
+		      Point_Addition(&(pMainArgs->negated_publickey), &(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address_1);
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
                             fprintf(OUTPUT,"%s\n", pMainArgs->str_address);
+                            fprintf(OUTPUT,"%s\n", pMainArgs->str_address_1);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       else    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # - %Zd\n",pMainArgs->str_address,sum_key);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
-                      Point_Addition(&(pMainArgs->negated_publickey), &target_publickey, &(pMainArgs->dst_publickey));
-                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address);
-                      if(FLAG_HIDECOMMENT)    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            fprintf(OUTPUT,"%s\n", pMainArgs->str_address);
-			    pthread_mutex_unlock(pMainArgs->pMutex);
-                      }
-                      else    
-		      {
-			    pthread_mutex_lock(pMainArgs->pMutex);
-                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_address,sum_key);
+                            gmp_fprintf(OUTPUT,"%s # - %Zd\n", pMainArgs->str_address, pMainArgs->sum_key);
+                            gmp_fprintf(OUTPUT,"%s # + %Zd\n", pMainArgs->str_address_1, pMainArgs->sum_key);
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       break;
             }
 
-      Point_Addition(&(pMainArgs->sum_publickey), &(pMainArgs->base_publickey), &(pMainArgs->dst_publickey));
-      mpz_set(pMainArgs->sum_publickey.x, pMainArgs->dst_publickey.x);
-      mpz_set(pMainArgs->sum_publickey.y, pMainArgs->dst_publickey.y);
-      mpz_add(sum_key,sum_key,base_key);
       
       sem_post(pMainArgs->pSemaphore);
       
@@ -314,12 +257,13 @@ void taskTwo(void* pArgs)
       mpz_clear(pMainArgs->dst_publickey.y);
       mpz_clear(pMainArgs->target_publickey.x);
       mpz_clear(pMainArgs->target_publickey.y);
+      mpz_clear(pMainArgs->base_key);
+      mpz_clear(pMainArgs->sum_key);
 
       //printf("%ld freeing tasktwo args %p\n", pthread_self(), pArgs);
       pMainArgs->pMutex = NULL;
       pMainArgs->pSemaphore = NULL;
       pMainArgs->pOutput = NULL;
-      pMainArgs->pThreadPool = NULL;
       //printf("%ld deallocating str_publickey %p\n", pthread_self(), pMainArgs->str_publickey);
       //printf("%ld deallocating str_rmd160 %p\n", pthread_self(), pMainArgs->str_rmd160);
       //printf("%ld deallocating str_address %p\n", pthread_self(), pMainArgs->str_address);
@@ -440,7 +384,7 @@ int main(int argc, char **argv)  {
 		
 	        //printf("FLAG_RANDOM %d\n", FLAG_RANDOM);
 		if(FLAG_RANDOM)	{
-			sem_init(&semaphore, 0, M-2);
+			sem_init(&semaphore, 0, 2-M);
 			gmp_randinit_mt(state);
 			gmp_randseed_ui(state, ((int)clock()) + ((int)time(NULL)) );
 			for(i = 0; i < M;i++)	{
@@ -476,8 +420,12 @@ int main(int argc, char **argv)  {
 				pArgs->pMutex = &mutex;
 				pArgs->pSemaphore = &semaphore;
 				pArgs->pOutput = OUTPUT;
-				pArgs->pThreadPool = pThreadPool;
 				
+				mpz_init(pArgs->base_key);
+				mpz_set(pArgs->base_key, base_key);
+
+				mpz_init(pArgs->sum_key);
+				mpz_set(pArgs->sum_key, sum_key);
 				QueueNode* pNode = createWorkNode(taskOne, pArgs);
 				
 				
@@ -485,7 +433,7 @@ int main(int argc, char **argv)  {
 			}
 			
 			sem_wait(&semaphore);
-	                //printf("FLAG_FORMAT %d\n", FLAG_FORMART);
+	                printf("FLAG_FORMAT %d\n", FLAG_FORMART);
 			switch(FLAG_FORMART)	{
 				case 0: //Publickey
 					generate_strpublickey(&target_publickey,FLAG_LOOK == 0,str_publickey);
@@ -517,7 +465,7 @@ int main(int argc, char **argv)  {
 			}
 		}
 		else	{
-			sem_init(&semaphore, 0, M-2);
+			sem_init(&semaphore, 0, 2-M);
 			
 			mpz_cdiv_q_ui(base_key,diff,M);
 			Scalar_Multiplication(G,&base_publickey,base_key);
@@ -557,10 +505,20 @@ int main(int argc, char **argv)  {
 				pArgs->pMutex = &mutex;
 				pArgs->pSemaphore = &semaphore;
 				pArgs->pOutput = OUTPUT;
-				pArgs->pThreadPool = pThreadPool;
 				
+				mpz_init(pArgs->base_key);
+				mpz_set(pArgs->base_key, base_key);
+
+				mpz_init(pArgs->sum_key);
+				mpz_set(pArgs->sum_key, sum_key);
+
 				QueueNode* pNode = createWorkNode(taskTwo, pArgs);
 				pushNode(pNode, &(pThreadPool->pHead), &(pThreadPool->pTail), &(pThreadPool->queueMutex), &(pThreadPool->workCond));
+      				
+				Point_Addition(&(pArgs->sum_publickey), &(pArgs->base_publickey), &(pArgs->dst_publickey));
+      				mpz_set(pArgs->sum_publickey.x, pArgs->dst_publickey.x);
+      				mpz_set(pArgs->sum_publickey.y, pArgs->dst_publickey.y);
+      				mpz_add(sum_key,sum_key,base_key);
 			}
 			
 			sem_wait(&semaphore);
@@ -613,7 +571,7 @@ int main(int argc, char **argv)  {
 		showhelp();
 	}
 
-	printf("Main task completed, destroying threadpool.\n");
+	//printf("Main task completed, destroying threadpool.\n");
 	destroyThreadPool(pThreadPool);
 	printf("Main task completed.\n");
 	return 0;
@@ -710,7 +668,7 @@ void set_publickey(char *param)	{
 		mpz_clear(mpz_aux2);
 		mpz_clear(Ysquared);
 	}
-	printf("freeing dest %p in %s\n", dest, __FUNCTION__);
+	//printf("freeing dest %p in %s\n", dest, __FUNCTION__);
 	free(dest);
 }
 
