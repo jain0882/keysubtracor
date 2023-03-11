@@ -57,7 +57,7 @@ static void* workerThread(void * pArg)
 	pThreadPool->nThreadCount--;
 	pthread_mutex_unlock(&(pThreadPool->threadPoolMutex));
 
-	printf("Thread destoryed %ld\n", pthread_self());
+	//printf("Thread destoryed %ld\n", pthread_self());
 
 	return NULL;
 }
