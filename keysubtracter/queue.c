@@ -11,6 +11,7 @@ bool isEmpty(QueueNode* pHead, QueueNode* pTail, pthread_mutex_t* pQueueMutex) {
 }
 
 void pushNode(QueueNode* pNode, QueueNode** ppHead, QueueNode** ppTail, pthread_mutex_t* pQueueMutex, pthread_cond_t* pCond) {
+	//printf("%s Thread: %ld queueMutex %p, pCond %p\n", __FUNCTION__, pthread_self(), pQueueMutex, pCond);
 	pthread_mutex_lock(pQueueMutex);
 	if(*ppHead == NULL && *ppTail == NULL)
 	{

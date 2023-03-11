@@ -225,7 +225,12 @@ void roundOne(void *arg)
   pThreadArgs->d = dd;
   pThreadArgs->e = ee;
 
+  int value = 0;
+  //sem_getvalue(pThreadArgs->pSemaphore, &value);
+  //printf("%s before signinglaing semaphore %d\n", __FUNCTION__, value);
   sem_post(pThreadArgs->pSemaphore);
+  //sem_getvalue(pThreadArgs->pSemaphore, &value);
+  //printf("%s after signinglaing semaphore %d\n", __FUNCTION__, value);
 }
 
 void roundTwo(void* arg)
@@ -234,6 +239,7 @@ void roundTwo(void* arg)
   uint32_t* MDbuf = pThreadArgs->pMDbuf;
   uint32_t* X = pThreadArgs->pX;
 
+  //printf("%s MDbuf address %p and thread arg %p\n", __FUNCTION__, MDbuf, pThreadArgs->pMDbuf);
   uint32_t aaa = MDbuf[0], bbb = MDbuf[1], ccc = MDbuf[2],
             ddd = MDbuf[3], eee = MDbuf[4];
 	/* parallel round 1 */
@@ -332,13 +338,19 @@ void roundTwo(void* arg)
   pThreadArgs->d = ddd;
   pThreadArgs->e = eee;
   
+  int value = 0;
+  //sem_getvalue(pThreadArgs->pSemaphore, &value);
+  //printf("%s signinglaing semaphore %d\n", __FUNCTION__, value);
   sem_post(pThreadArgs->pSemaphore);
+  //sem_getvalue(pThreadArgs->pSemaphore, &value);
+  //printf("%s after signinglaing semaphore %d\n", __FUNCTION__, value);
 }
 
 static void
-RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
+RMDcompress (uint32_t * MDbuf, uint32_t * X)
 {
   //printf("%s MDbuf %p\n", __FUNCTION__, MDbuf);
+  ThreadPool* pThreadPool = initThreadPool(false);
   uint32_t aa = MDbuf[0], bb = MDbuf[1], cc = MDbuf[2],
             dd = MDbuf[3], ee = MDbuf[4];
   uint32_t aaa = MDbuf[0], bbb = MDbuf[1], ccc = MDbuf[2],
@@ -356,6 +368,7 @@ RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
   
   QueueNode* pNode = createWorkNode(roundOne, pThreadArgRoundOne);
 
+  //printf("%s 1 pMDbuf %p\n", __FUNCTION__, pThreadArgRoundOne->pMDbuf);
   pushNode(pNode, &(pThreadPool->pHead), &(pThreadPool->pTail), &(pThreadPool->queueMutex), &(pThreadPool->workCond));
 
   pThreadArgRoundTwo->pMDbuf = MDbuf;
@@ -364,9 +377,15 @@ RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
   
   pNode = createWorkNode(roundTwo, pThreadArgRoundTwo);
   
+  //printf("%s 2 pMDbuf %p\n", __FUNCTION__, pThreadArgRoundOne->pMDbuf);
   pushNode(pNode, &(pThreadPool->pHead), &(pThreadPool->pTail), &(pThreadPool->queueMutex), &(pThreadPool->workCond));
 	
+  int value = 0;
+  sem_getvalue(&semaphore, &value);
+  //printf("%s before wait %d\n", __FUNCTION__, value);
+  
   sem_wait(&semaphore);
+  //printf("%s After wait %d\n", __FUNCTION__, value);
 
 /* combine results */
   pThreadArgRoundTwo->d += pThreadArgRoundOne->c + MDbuf[1];		/* final result for MDbuf[0] */
@@ -377,8 +396,11 @@ RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
   MDbuf[0] = pThreadArgRoundTwo->d;
 
   //printf("freeing rmd args %p, %p\n", pThreadArgRoundOne, pThreadArgRoundTwo);
-  free(pThreadArgRoundOne);
-  free(pThreadArgRoundTwo);
+  //free(pThreadArgRoundOne);
+  //free(pThreadArgRoundTwo);
+
+  destroyThreadPool(pThreadPool);
+  //printf("%s destoryed Threadpool\n", __FUNCTION__);
 }
 
 
@@ -390,7 +412,7 @@ RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
  */
 static void
 RMDFinish (uint32_t * MDbuf, uint8_t * strptr, uint32_t lswlen,
-           uint32_t mswlen, ThreadPool* pThreadPool)
+           uint32_t mswlen)
 {
   uint32_t i;			/* counter */
   uint32_t X[16];		/* message words */
@@ -410,14 +432,14 @@ RMDFinish (uint32_t * MDbuf, uint8_t * strptr, uint32_t lswlen,
   if ((lswlen & 63) > 55)
     {
       /* length goes to next block */
-      RMDcompress (MDbuf, X, pThreadPool);
+      RMDcompress (MDbuf, X);
       memset (X, 0, 16 * sizeof (uint32_t));
     }
 
   /* append length in bits */
   X[14] = lswlen << 3;
   X[15] = (lswlen >> 29) | (mswlen << 3);
-  RMDcompress (MDbuf, X, pThreadPool);
+  RMDcompress (MDbuf, X);
 }
 
 /*
@@ -454,7 +476,7 @@ RMD160Init (RMD160_CTX * ctx)
 /*
    Update the RIPEMD-160 hash state for a block of data.
  */
-void   RMD160Update(RMD160_CTX *ctx, const unsigned char *buf, unsigned int len, ThreadPool* pThreadPool)
+void   RMD160Update(RMD160_CTX *ctx, const unsigned char *buf, unsigned int len)
 {
   unsigned i;
 
@@ -476,7 +498,7 @@ void   RMD160Update(RMD160_CTX *ctx, const unsigned char *buf, unsigned int len,
     {				/* First chunk is an odd size */
       memcpy ((uint8_t *) ctx->key + i, buf, RIPEMD160_BLOCKBYTES - i);
       rmd160ByteSwap (ctx->key, (uint8_t *) ctx->key, RIPEMD160_BLOCKWORDS);
-      RMDcompress (ctx->iv, ctx->key, pThreadPool);
+      RMDcompress (ctx->iv, ctx->key);
       buf += RIPEMD160_BLOCKBYTES - i;
       len -= RIPEMD160_BLOCKBYTES - i;
     }
@@ -485,7 +507,7 @@ void   RMD160Update(RMD160_CTX *ctx, const unsigned char *buf, unsigned int len,
   while (len >= RIPEMD160_BLOCKBYTES)
     {
       rmd160ByteSwap (ctx->key, buf, RIPEMD160_BLOCKWORDS);
-      RMDcompress (ctx->iv, ctx->key, pThreadPool);
+      RMDcompress (ctx->iv, ctx->key);
       buf += RIPEMD160_BLOCKBYTES;
       len -= RIPEMD160_BLOCKBYTES;
     }
@@ -500,12 +522,12 @@ void   RMD160Update(RMD160_CTX *ctx, const unsigned char *buf, unsigned int len,
    Final wrapup - MD4 style padding on last block.
  */
 void
-RMD160Final (unsigned char digest[20], RMD160_CTX * ctx, ThreadPool* pThreadPool)
+RMD160Final (unsigned char digest[20], RMD160_CTX * ctx)
 {
   int i;
   uint32_t t;
 
-  RMDFinish (ctx->iv, (uint8_t *) ctx->key, ctx->bytesLo, ctx->bytesHi, pThreadPool);
+  RMDFinish (ctx->iv, (uint8_t *) ctx->key, ctx->bytesLo, ctx->bytesHi);
 
   for (i = 0; i < RIPEMD160_HASHWORDS; i++)
     {
@@ -519,9 +541,9 @@ RMD160Final (unsigned char digest[20], RMD160_CTX * ctx, ThreadPool* pThreadPool
   memset (ctx, 0, sizeof (RMD160_CTX));	/* In case it's sensitive */
 }
 
-void RMD160Data(const unsigned char *buf, unsigned int len, char *out, ThreadPool* pThreadPool)	{
+void RMD160Data(const unsigned char *buf, unsigned int len, char *out)	{
 	RMD160_CTX ctx;
 	RMD160Init(&ctx);
-	RMD160Update(&ctx,(unsigned char *)buf,len, pThreadPool);
-	RMD160Final((unsigned char *)out,&ctx, pThreadPool);
+	RMD160Update(&ctx,(unsigned char *)buf,len);
+	RMD160Final((unsigned char *)out,&ctx);
 }

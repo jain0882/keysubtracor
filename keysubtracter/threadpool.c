@@ -5,7 +5,7 @@
 
 static void* workerThread(void * pArg)
 {
-	printf("Inside worker Thread %ld\n", pthread_self());
+	//printf("Inside worker Thread %ld\n", pthread_self());
 	ThreadPool* pThreadPool = (ThreadPool *)pArg;
 	while(1)
 	{
@@ -62,9 +62,14 @@ static void* workerThread(void * pArg)
 	return NULL;
 }
 
-ThreadPool* initThreadPool() {
-	int numOfCPU = sysconf(_SC_NPROCESSORS_ONLN);
-	printf("number of cpu %d\n", numOfCPU);
+ThreadPool* initThreadPool(bool bAsPerCores) {
+	int numOfCPU = 2;
+	if(bAsPerCores)
+	{
+	   numOfCPU = sysconf(_SC_NPROCESSORS_ONLN);
+	  printf("number of cpu %d\n", numOfCPU);
+	}
+
 	ThreadPool* pThreadPool = (ThreadPool *)malloc(sizeof(ThreadPool));
 	
 	pThreadPool->nThreadCount = 0;
@@ -79,12 +84,13 @@ ThreadPool* initThreadPool() {
 	pthread_cond_init(&(pThreadPool->workCond), NULL);
 	pthread_cond_init(&(pThreadPool->workingCond), NULL);
 
+	//printf("%s workMutex: %p, queueMutex: %p, threadPoolMutex: %p, workCond: %p, workingCond: %p", __FUNCTION__, &(pThreadPool->workMutex), &(pThreadPool->queueMutex), &(pThreadPool->threadPoolMutex), &(pThreadPool->workCond), &(pThreadPool->workingCond));
 	pthread_t thread;
 	for(int i = 0; i < numOfCPU; ++i)
 	{
 		//printf("Thread %d creating\n", i);
 		pthread_create(&thread, NULL, workerThread, (void *)pThreadPool);
-		pthread_detach(thread);
+		//pthread_detach(thread);
 		pThreadPool->nThreadCount++;
 		//printf("Thread %d created\n", i);
 	}
@@ -161,7 +167,7 @@ void destroyThreadPool(ThreadPool* pThreadPool)
 	//pthread_cond_destory(&(pThreadPool->workCond));
 	//phread_cond_destroy(&(pThreadPool->workingCond));
 	
-	printf("Destroying threadpool %p\n", pThreadPool);
+	//printf("Destroying threadpool %p\n", pThreadPool);
 	free(pThreadPool);
 }
 

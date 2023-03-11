@@ -38,8 +38,8 @@ void set_look(char *param);
 void set_bit(char *param);
 void set_publickey(char *param);
 void set_range(char *param);
-void generate_straddress(struct Point *publickey,bool compress,char *dst, ThreadPool* pThreadPool);
-void generate_strrmd160(struct Point *publickey,bool compress,char *dst, ThreadPool* pThreadPool);
+void generate_straddress(struct Point *publickey,bool compress,char *dst);
+void generate_strrmd160(struct Point *publickey,bool compress,char *dst);
 void generate_strpublickey(struct Point *publickey,bool compress,char *dst);
 
 typedef struct ThreadArgsMain_ {
@@ -117,7 +117,7 @@ void taskOne(void* pArg)
                         }
                         break;
 		 case 1: //rmd160
-                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160, pMainArgs->pThreadPool);
+                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160);
                         if(FLAG_HIDECOMMENT)    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
@@ -131,7 +131,7 @@ void taskOne(void* pArg)
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         Point_Addition(&(pMainArgs->negated_publickey),&target_publickey,&(pMainArgs->dst_publickey));
-                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_rmd160, pMainArgs->pThreadPool);
+                        generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_rmd160);
                         if(FLAG_HIDECOMMENT)    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
@@ -146,7 +146,7 @@ void taskOne(void* pArg)
                         }
                         break;
 		 case 2: //address
-                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_address, pMainArgs->pThreadPool);
+                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_address);
                         if(FLAG_HIDECOMMENT)    
 			{
 				pthread_mutex_lock(pMainArgs->pMutex);
@@ -160,7 +160,7 @@ void taskOne(void* pArg)
 				pthread_mutex_unlock(pMainArgs->pMutex);
                         }
                         Point_Addition(&(pMainArgs->negated_publickey),&target_publickey,&(pMainArgs->dst_publickey));
-                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_address, pMainArgs->pThreadPool);
+                        generate_straddress(&(pMainArgs->dst_publickey),FLAG_LOOK == 0,pMainArgs->str_address);
                         if(FLAG_HIDECOMMENT)   
 		       	{
 				pthread_mutex_lock(pMainArgs->pMutex);
@@ -237,7 +237,7 @@ void taskTwo(void* pArgs)
                       }
                       break;
 		case 1: //rmd160
-                      generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160, pMainArgs->pThreadPool);
+                      generate_strrmd160(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_rmd160);
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
@@ -251,7 +251,7 @@ void taskTwo(void* pArgs)
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       Point_Addition(&(pMainArgs->negated_publickey), &target_publickey, &(pMainArgs->dst_publickey));
-                      generate_strrmd160(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_rmd160, pMainArgs->pThreadPool);
+                      generate_strrmd160(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_rmd160);
 
                       if(FLAG_HIDECOMMENT)    
 		      {
@@ -267,7 +267,7 @@ void taskTwo(void* pArgs)
                       }
                       break;
 		case 2: //address
-                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address, pMainArgs->pThreadPool);
+                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address);
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
@@ -281,7 +281,7 @@ void taskTwo(void* pArgs)
 			    pthread_mutex_unlock(pMainArgs->pMutex);
                       }
                       Point_Addition(&(pMainArgs->negated_publickey), &target_publickey, &(pMainArgs->dst_publickey));
-                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address, pMainArgs->pThreadPool);
+                      generate_straddress(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_address);
                       if(FLAG_HIDECOMMENT)    
 		      {
 			    pthread_mutex_lock(pMainArgs->pMutex);
@@ -405,7 +405,7 @@ int main(int argc, char **argv)  {
 		}
 	}
 
-	ThreadPool* pThreadPool = initThreadPool();
+	ThreadPool* pThreadPool = initThreadPool(true);
 	pthread_mutex_t mutex;
 	pthread_mutex_init(&mutex, NULL);
 	//printf("FLAG_BIT %d, FLAG_RANGE %d, FLAG_PUBLIC %d, FLAG_N %d\n", FLAG_BIT, FLAG_RANGE, FLAG_PUBLIC, FLAG_N);
@@ -476,6 +476,7 @@ int main(int argc, char **argv)  {
 				pArgs->pMutex = &mutex;
 				pArgs->pSemaphore = &semaphore;
 				pArgs->pOutput = OUTPUT;
+				pArgs->pThreadPool = pThreadPool;
 				
 				QueueNode* pNode = createWorkNode(taskOne, pArgs);
 				
@@ -496,7 +497,7 @@ int main(int argc, char **argv)  {
 					}
 				break;
 				case 1: //rmd160
-					generate_strrmd160(&target_publickey,FLAG_LOOK == 0,str_rmd160, pThreadPool);
+					generate_strrmd160(&target_publickey,FLAG_LOOK == 0,str_rmd160);
 					if(FLAG_HIDECOMMENT)	{
 						fprintf(OUTPUT,"%s\n",str_rmd160);
 					}
@@ -505,7 +506,7 @@ int main(int argc, char **argv)  {
 					}
 				break;
 				case 2:	//address
-					generate_straddress(&target_publickey,FLAG_LOOK == 0,str_address, pThreadPool);
+					generate_straddress(&target_publickey,FLAG_LOOK == 0,str_address);
 					if(FLAG_HIDECOMMENT)	{
 						fprintf(OUTPUT,"%s\n",str_address);
 					}
@@ -556,6 +557,7 @@ int main(int argc, char **argv)  {
 				pArgs->pMutex = &mutex;
 				pArgs->pSemaphore = &semaphore;
 				pArgs->pOutput = OUTPUT;
+				pArgs->pThreadPool = pThreadPool;
 				
 				QueueNode* pNode = createWorkNode(taskTwo, pArgs);
 				pushNode(pNode, &(pThreadPool->pHead), &(pThreadPool->pTail), &(pThreadPool->queueMutex), &(pThreadPool->workCond));
@@ -574,7 +576,7 @@ int main(int argc, char **argv)  {
 					}
 				break;
 				case 1: //rmd160
-					generate_strrmd160(&target_publickey,FLAG_LOOK == 0,str_rmd160, pThreadPool);
+					generate_strrmd160(&target_publickey,FLAG_LOOK == 0,str_rmd160);
 					if(FLAG_HIDECOMMENT)	{
 						fprintf(OUTPUT,"%s\n",str_rmd160);
 					}
@@ -583,7 +585,7 @@ int main(int argc, char **argv)  {
 					}
 				break;
 				case 2:	//address
-					generate_straddress(&target_publickey,FLAG_LOOK == 0,str_address, pThreadPool);
+					generate_straddress(&target_publickey,FLAG_LOOK == 0,str_address);
 					if(FLAG_HIDECOMMENT)	{
 						fprintf(OUTPUT,"%s\n",str_address);
 					}
@@ -611,9 +613,9 @@ int main(int argc, char **argv)  {
 		showhelp();
 	}
 
-	printf("Main task completed, destroying threadpool\n.");
+	printf("Main task completed, destroying threadpool.\n");
 	destroyThreadPool(pThreadPool);
-	printf("Main task completed\n.");
+	printf("Main task completed.\n");
 	return 0;
 }
 
@@ -775,7 +777,7 @@ void generate_strpublickey(struct Point *publickey,bool compress,char *dst)	{
 	}
 }
 
-void generate_strrmd160(struct Point *publickey,bool compress,char *dst, ThreadPool* pThreadPool)	{
+void generate_strrmd160(struct Point *publickey,bool compress,char *dst)	{
 	char str_publickey[131];
 	char bin_publickey[65];
 	char bin_sha256[32];
@@ -796,11 +798,11 @@ void generate_strrmd160(struct Point *publickey,bool compress,char *dst, ThreadP
 		hexs2bin(str_publickey,bin_publickey);
 		sha256(bin_publickey, 65, bin_sha256);
 	}
-	RMD160Data((const unsigned char*)bin_sha256,32, bin_rmd160, pThreadPool);
+	RMD160Data((const unsigned char*)bin_sha256,32, bin_rmd160);
 	tohex_dst(bin_rmd160,20,dst);
 }
 
-void generate_straddress(struct Point *publickey,bool compress,char *dst, ThreadPool* pThreadPool)	{
+void generate_straddress(struct Point *publickey,bool compress,char *dst)	{
 	char str_publickey[131];
 	char bin_publickey[65];
 	char bin_sha256[32];
@@ -822,7 +824,7 @@ void generate_straddress(struct Point *publickey,bool compress,char *dst, Thread
 		hexs2bin(str_publickey,bin_publickey);
 		sha256(bin_publickey, 65, bin_sha256);
 	}
-	RMD160Data((const unsigned char*)bin_sha256,32, bin_digest+1, pThreadPool);
+	RMD160Data((const unsigned char*)bin_sha256,32, bin_digest+1);
 	
 	/* Firts byte 0, this is for the Address begining with 1.... */
 	

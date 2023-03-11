@@ -19,7 +19,7 @@ typedef struct ThreadPool_ {
 	bool bStop;
 } ThreadPool;
 
-ThreadPool* initThreadPool();
+ThreadPool* initThreadPool(bool bAsPerCores);
 QueueNode* createWorkNode(thread_func_t func, void* pArgs);
 void destroyWorkNode(QueueNode* pNode);
 void waitThreadPool(ThreadPool* pThreadPool);
