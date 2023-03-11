@@ -5,7 +5,7 @@
 
 static void* workerThread(void * pArg)
 {
-	//printf("Inside worker Thread\n");
+	printf("Inside worker Thread %ld\n", pthread_self());
 	ThreadPool* pThreadPool = (ThreadPool *)pArg;
 	while(1)
 	{
@@ -41,7 +41,6 @@ static void* workerThread(void * pArg)
 			destroyWorkNode(pNode);
 			//printf("destroy worker node %p\n", pNode);
 		}
-
 		pthread_mutex_lock(&(pThreadPool->threadPoolMutex));
 		if(pThreadPool->bStop && isEmpty(pThreadPool->pHead, pThreadPool->pTail, &(pThreadPool->queueMutex)))
 		{
@@ -54,10 +53,11 @@ static void* workerThread(void * pArg)
 
 	pthread_mutex_lock(&(pThreadPool->threadPoolMutex));
 	pthread_cond_broadcast(&(pThreadPool->workCond));
+	pthread_cond_broadcast(&(pThreadPool->workingCond));
 	pThreadPool->nThreadCount--;
 	pthread_mutex_unlock(&(pThreadPool->threadPoolMutex));
 
-	printf("Thread destoryed\n");
+	printf("Thread destoryed %ld\n", pthread_self());
 
 	return NULL;
 }
@@ -82,11 +82,11 @@ ThreadPool* initThreadPool() {
 	pthread_t thread;
 	for(int i = 0; i < numOfCPU; ++i)
 	{
-		printf("Thread %d creating\n", i);
+		//printf("Thread %d creating\n", i);
 		pthread_create(&thread, NULL, workerThread, (void *)pThreadPool);
 		pthread_detach(thread);
 		pThreadPool->nThreadCount++;
-		printf("Thread %d created\n", i);
+		//printf("Thread %d created\n", i);
 	}
 	return pThreadPool;
 }
@@ -107,7 +107,9 @@ void destroyWorkNode(QueueNode* pNode)
 	pNode->pPrev = NULL;
 	pNode->func = NULL;
 	pNode->pArgs = NULL;
+	//printf("Freeing worker node %p\n", pNode);
 	free(pNode);
+	//printf("Freed worker node %p\n", pNode);
 }
 
 void waitThreadPool(ThreadPool* pThreadPool)
@@ -116,6 +118,7 @@ void waitThreadPool(ThreadPool* pThreadPool)
 	{
 		return;
 	}
+
 	pthread_mutex_lock(&(pThreadPool->workMutex));
 	//printf("Stopping threadpool and broadcasting signal\n");
 	pThreadPool->bStop = true;
@@ -146,16 +149,17 @@ void destroyThreadPool(ThreadPool* pThreadPool)
 	if(pThreadPool == NULL)
 		return;
 
-	pthread_mutex_lock(&(pThreadPool->workMutex));
-	pthread_cond_broadcast(&(pThreadPool->workCond));
-	pthread_mutex_unlock(&(pThreadPool->workMutex));
+	//pthread_mutex_lock(&(pThreadPool->workMutex));
+	//pthread_cond_broadcast(&(pThreadPool->workCond));
+	//pthread_mutex_unlock(&(pThreadPool->workMutex));
 	
 	waitThreadPool(pThreadPool);
 
 	//pthread_mutex_destory(&(pThreadPool->workMutex));
 	//pthread_cond_destory(&(pThreadPool->workCond));
 	//phread_cond_destroy(&(pThreadPool->workingCond));
-
+	
+	printf("Destroying threadpool %p\n", pThreadPool);
 	free(pThreadPool);
 }
 

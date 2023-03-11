@@ -125,6 +125,7 @@ void roundOne(void *arg)
   uint32_t* MDbuf = pThreadArgs->pMDbuf;
   uint32_t* X = pThreadArgs->pX;
 
+  printf("%s MDbuf address %p and thread arg %p\n", __FUNCTION__, MDbuf, pThreadArgs->pMDbuf);
   uint32_t aa = MDbuf[0], bb = MDbuf[1], cc = MDbuf[2],
             dd = MDbuf[3], ee = MDbuf[4];
   /*round 1*/
@@ -337,6 +338,7 @@ void roundTwo(void* arg)
 static void
 RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
 {
+  printf("%s MDbuf %p\n", __FUNCTION__, MDbuf);
   uint32_t aa = MDbuf[0], bb = MDbuf[1], cc = MDbuf[2],
             dd = MDbuf[3], ee = MDbuf[4];
   uint32_t aaa = MDbuf[0], bbb = MDbuf[1], ccc = MDbuf[2],
@@ -373,6 +375,10 @@ RMDcompress (uint32_t * MDbuf, uint32_t * X, ThreadPool* pThreadPool)
   MDbuf[3] = MDbuf[4] + pThreadArgRoundOne->a + pThreadArgRoundTwo->b;
   MDbuf[4] = MDbuf[0] + pThreadArgRoundOne->b + pThreadArgRoundTwo->c;
   MDbuf[0] = pThreadArgRoundTwo->d;
+
+  printf("freeing rmd args %p, %p\n", pThreadArgRoundOne, pThreadArgRoundTwo);
+  free(pThreadArgRoundOne);
+  free(pThreadArgRoundTwo);
 }
 
 
