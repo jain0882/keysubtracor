@@ -106,6 +106,8 @@ void destroyWorkNode(QueueNode* pNode)
 	pNode->pNext = NULL;
 	pNode->pPrev = NULL;
 	pNode->func = NULL;
+
+	free(pNode->pArgs);
 	pNode->pArgs = NULL;
 	//printf("Freeing worker node %p\n", pNode);
 	free(pNode);
