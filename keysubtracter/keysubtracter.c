@@ -182,9 +182,14 @@ void taskTwo(void* pArgs)
 	switch(FLAG_FORMART)
 	{
          	case 0: //Publickey
+		      //printf("%ld ", pthread_self());
+		      //gmp_printf("1 %Zd \n", pMainArgs->dst_publickey.x, pMainArgs->dst_publickey.y);
                       generate_strpublickey(&(pMainArgs->dst_publickey),FLAG_LOOK == 0, pMainArgs->str_publickey);
 
                       Point_Addition(&(pMainArgs->negated_publickey), &(pMainArgs->target_publickey), &(pMainArgs->dst_publickey));
+		      
+		      //printf("%ld ", pthread_self());
+		      //gmp_printf("2 %Zd \n", pMainArgs->dst_publickey.x, pMainArgs->dst_publickey.y);
                       generate_strpublickey(&(pMainArgs->dst_publickey), FLAG_LOOK == 0, pMainArgs->str_publickey_1);
                       if(FLAG_HIDECOMMENT)    
 		      {
@@ -515,9 +520,9 @@ int main(int argc, char **argv)  {
 				QueueNode* pNode = createWorkNode(taskTwo, pArgs);
 				pushNode(pNode, &(pThreadPool->pHead), &(pThreadPool->pTail), &(pThreadPool->queueMutex), &(pThreadPool->workCond));
       				
-				Point_Addition(&(pArgs->sum_publickey), &(pArgs->base_publickey), &(pArgs->dst_publickey));
-      				mpz_set(pArgs->sum_publickey.x, pArgs->dst_publickey.x);
-      				mpz_set(pArgs->sum_publickey.y, pArgs->dst_publickey.y);
+				Point_Addition(&sum_publickey, &base_publickey, &dst_publickey);
+      				mpz_set(sum_publickey.x, dst_publickey.x);
+      				mpz_set(sum_publickey.y, dst_publickey.y);
       				mpz_add(sum_key,sum_key,base_key);
 			}
 			
